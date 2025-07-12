@@ -21,7 +21,7 @@ interface Gem {
     y: number;
     type: GemType | null;
     selected?: boolean;
-    renderY?: number; // додатково для анімації падіння
+    renderY?: number; //for anim
 }
 
 let selectedGem: Gem | null = null;
