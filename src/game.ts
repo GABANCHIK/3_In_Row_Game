@@ -28,6 +28,7 @@ let selectedGem: Gem | null = null;
 let offsetX = 0;
 let offsetY = 0;
 let isDragging = false;
+let isAnimating = false;
 
 /**
  * Loads gem images asynchronously.
@@ -178,7 +179,7 @@ canvas.addEventListener("mousemove", (event) => {
 });
 
 canvas.addEventListener("mouseup", (event) => {
-    if (!isDragging || !selectedGem) return;
+    if (!isDragging || !selectedGem || isAnimating) return; 
 
     const rect = canvas.getBoundingClientRect();
     const mouseX: number = event.clientX - rect.left;
@@ -218,18 +219,30 @@ canvas.addEventListener("mouseup", (event) => {
             board[newY][newX] = targetGem;
             board[selectedGem.y][selectedGem.x] = selectedGem;
         } else {
-            let matches = findMatches();
-            while (matches.length > 0) {
-                console.log(`Matched ${matches.length} gems!`);
+            isAnimating = true; 
+            /**
+             * Recursively processes matches on the game board.
+             */
+            function processMatchesRecursively() {
+                let matches = findMatches();
+                if (matches.length === 0) {
+                    drawBoard();
+                    isAnimating = false; 
+                    return;
+                }
+
                 totalScore += matches.length * 100;
+                scoreElement.innerHTML = totalScore.toString();
+
                 removeMatches(matches);
                 const fallingGems = collapseBoard();
-                animateFalling(fallingGems, () => {
-                    drawBoard();
-                });
 
-                matches = findMatches();
+                animateFalling(fallingGems, () => {
+                    processMatchesRecursively();
+                });
             }
+
+            processMatchesRecursively();
         }
     }
 
@@ -374,8 +387,8 @@ function collapseBoard(): Gem[] {
  * @param callback - An optional callback function to execute after the animation is complete.
  */
 function animateFalling(fallingGems: Gem[], callback?: () => void) {
-    const speed = 400;
-    let prevTimestamp: number | null = null;
+    const speed = 400; 
+    let prevTimestamp: number | null = null; 
 
     /**
      * Performs a single step of the animation.
@@ -391,6 +404,7 @@ function animateFalling(fallingGems: Gem[], callback?: () => void) {
 
         for (const gem of fallingGems) {
             const targetY = gem.y * CELL_SIZE;
+
             if (gem.renderY! < targetY) {
                 gem.renderY! += speed * delta;
                 if (gem.renderY! > targetY) gem.renderY! = targetY;
@@ -401,16 +415,16 @@ function animateFalling(fallingGems: Gem[], callback?: () => void) {
         drawBoardWithRenderY();
 
         if (animationInProgress) {
-            requestAnimationFrame(step); // Continue the animation if any gem is still falling
+            requestAnimationFrame(step);
         } else {
             for (const gem of fallingGems) {
-                delete gem.renderY; // Remove the renderY property once the gem reaches its target
+                delete gem.renderY;
             }
-            callback?.(); // Execute the callback if provided
+            callback?.();
         }
     }
 
-    requestAnimationFrame(step); // Start the animation
+    requestAnimationFrame(step);
 }
 
 /**
